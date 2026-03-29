@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini Space Shooter</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
+        canvas { border: 2px solid #333; background: #050505; cursor: crosshair; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <h1>Score: <span id="score">0</span></h1>
+        <p>ใช้เม้าส์เลื่อนเพื่อยิง | อย่าให้เอเลี่ยนหลุดไปได้!</p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let score = 0;
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+
+        // ยานผู้เล่น
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 50,
+            w: 40,
+            h: 40
+        };
+
+        // ติดตามเม้าส์
+        window.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            player.x = e.clientX - rect.left - player.w / 2;
+        });
+
+        // ยิงกระสุนอัตโนมัติ
+        setInterval(() => {
+            bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 4, h: 10, speed: 7 });
+        }, 150);
+
+        // สร้างศัตรู
+        function spawnEnemy() {
+            const size = Math.random() * 30 + 20;
+            enemies.push({
+                x: Math.random() * (canvas.width - size),
+                y: -size,
+                w: size,
+                h: size,
+                speed: Math.random() * 2 + 1,
+                color: `hsl(${Math.random() * 360}, 70%, 50%)`
+            });
+        }
+        setInterval(spawnEnemy, 800);
+
+        function update() {
+            // Update Bullets
+            bullets.forEach((b, i) => {
+                b.y -= b.speed;
+                if (b.y < 0) bullets.splice(i, 1);
+            });
+
+            // Update Enemies
+            enemies.forEach((en, i) => {
+                en.y += en.speed;
+                if (en.y > canvas.height) {
+                    enemies.splice(i, 1);
+                    score = Math.max(0, score - 5); // หลุดไปหักคะแนน
+                    scoreElement.innerText = score;
+                }
+
+                // ตรวจการชน (กระสุน + ศัตรู)
+                bullets.forEach((b, bi) => {
+                    if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
+                        enemies.splice(i, 1);
+                        bullets.splice(bi, 1);
+                        score += 10;
+                        scoreElement.innerText = score;
+                    }
+                });
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // วาดผู้เล่น (ยาน)
+            ctx.fillStyle = '#00ffcc';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x + 15, player.y - 10, 10, 10); // หัวยาน
+
+            // วาดกระสุน
+            ctx.fillStyle = '#ffff00';
+            bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+
+            // วาดศัตรู
+            enemies.forEach(en => {
+                ctx.fillStyle = en.color;
+                ctx.fillRect(en.x, en.y, en.w, en.h);
+            });
+
+            requestAnimationFrame(() => {
+                update();
+                draw();
+            });
+        }
+
+        draw();
+    </script>
+</body>
+</html>
